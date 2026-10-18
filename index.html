@@ -134,7 +134,17 @@ const WORDS = [
   { id:"frog",  pic:"🐸",    chunks:["fr","og"] },
   { id:"cake",  pic:"🎂",    chunks:["c","ake"] },
   { id:"bee",   pic:"🐝",    chunks:["b","ee"] },
-  { id:"rose",  pic:"🌹",    chunks:["r","ose"] }
+  { id:"rose",  pic:"🌹",    chunks:["r","ose"] },
+  { id:"bat",   pic:"🦇",    chunks:["b","at"] },
+  { id:"hat",   pic:"🎩",    chunks:["h","at"] },
+  { id:"bus",   pic:"🚌",    chunks:["b","us"] },
+  { id:"cup",   pic:"🥤",    chunks:["c","up"] },
+  { id:"mom",   pic:"❤️",    chunks:["m","om"] },
+  { id:"dad",   pic:"💙",    chunks:["d","ad"] },
+  { id:"top",   pic:"🔝",    chunks:["t","op"] },
+  { id:"bed",   pic:"🛏️",   chunks:["b","ed"] },
+  { id:"box",   pic:"📦",    chunks:["b","ox"] },
+  { id:"cow",   pic:"🐮",    chunks:["c","ow"] }
 ];
 const DISPLAY = { r:"R" }; // Rose gets her capital R
 const COLORS = ["#ff6fa5","#ff9f2e","#3fbf5a","#3d9bff","#9b6bff","#ff5a4d"];
@@ -269,8 +279,8 @@ $("buddy").addEventListener("click", () => {
 // chunk_ clips): the chunk_ clips deliberately say each sound twice or with a
 // carrier word, which is the teaching voice in Build mode but made Pick mode
 // play doubles (Amanda's QA, Oct 18, 2026). Build mode keeps chunk_ as-is.
-const ONSETS = ["c","d","p","s","m","f","sh","fr","b","r"];
-const RIMES = ["at","og","ig","un","ap","it","ish","ip","uck","ark","ake","ee","ose"];
+const ONSETS = ["c","d","p","s","m","f","sh","fr","b","r","h","t"];
+const RIMES = ["at","og","ig","un","ap","it","ish","ip","uck","ark","ake","ee","ose","us","up","om","ad","op","ed","ox","ow"];
 const PICK_PRAISE = ["audio/praise_pick_1.mp3","audio/praise_pick_2.mp3"];
 const chunk1Clip = cid => "audio/chunk1_" + cid + ".mp3"; // single-sound clips, Pick mode only
 
