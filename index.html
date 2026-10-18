@@ -292,6 +292,12 @@ $("buddy").addEventListener("click", () => {
 // chunk_ clips): the chunk_ clips deliberately say each sound twice or with a
 // carrier word, which is the teaching voice in Build mode but made Pick mode
 // play doubles (Amanda's QA, Oct 18, 2026). Build mode keeps chunk_ as-is.
+// SUCCESS REPLAY (Amanda's design, Oct 18, 2026 — cache v11): after a correct
+// build, "Play my word!" plays her pieces (chunk1_ singles), then the whole
+// word said PLAINLY (wordplain_<id>), then the rime teaching line
+// (teach_<rime>: "The i-g makes the ig sound."), then praise. The sandwich
+// finale no longer plays on the success path; it still plays on "Hear it",
+// as the first-miss model, and in the Watch-me reveal.
 const ONSETS = ["c","d","p","s","m","f","sh","fr","b","r","h","t"];
 const RIMES = ["at","og","ig","un","ap","it","ish","ip","uck","ark","ake","ee","ose","us","up","om","ad","op","ed","ox","ow"];
 const PICK_PRAISE = ["audio/praise_pick_1.mp3","audio/praise_pick_2.mp3"];
@@ -400,7 +406,8 @@ async function playMine(){
     pickDone = true;
     renderPickStage();
     confetti();
-    await playFinale(w);
+    await playClip("audio/wordplain_" + w.id + ".mp3");
+    await playClip("audio/teach_" + w.chunks[1] + ".mp3");
     builtCount++;
     localStorage.setItem("bawBuilt", String(builtCount));
     renderCounter();
