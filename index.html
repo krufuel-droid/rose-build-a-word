@@ -41,6 +41,23 @@
   #picker { display:flex; flex-wrap:wrap; gap:10px; justify-content:center; max-width:480px; margin:0 auto; }
   .pick { font-size:2rem; width:62px; height:62px; border:3px solid #bfeee8; border-radius:18px; background:#fff; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,.10); padding:0; line-height:1; }
   .pick.current { border-color:#f5b301; background:#fffbe0; }
+  /* ---- mode switch + Pick the Sounds ---- */
+  #modebar { display:flex; gap:10px; justify-content:center; margin:2px 0 12px; }
+  .modebtn { font-size:1.15rem; font-weight:bold; padding:13px 20px; border-radius:999px; border:3px solid #2ec4b6; background:#fff; color:#0b7a6e; font-family:inherit; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,.10); }
+  .modebtn.on { background:#2ec4b6; color:#fff; }
+  .modebtn:disabled { opacity:.45; }
+  #pickPrompt { font-size:1.25rem; font-weight:bold; margin:6px 0 2px; min-height:1.6em; }
+  #pickPic { font-size:6.2rem; line-height:1.15; margin:4px 0 2px; }
+  #pickStage { background:#fff; border:4px dashed #2ec4b6; border-radius:26px; min-height:150px; margin:14px auto 6px; padding:26px 8px 14px; display:flex; flex-wrap:wrap; gap:10px; justify-content:center; align-items:center; max-width:480px; transition:box-shadow .3s, background .3s; }
+  #pickStage.glow { background:#fffbe0; box-shadow:0 0 0 6px #ffe066, 0 0 34px 10px rgba(255,214,64,.75); border-color:#f5b301; }
+  #pickStage.glow .chunk { animation:wiggle .5s ease infinite alternate; }
+  .slot { width:78px; height:92px; border:3px dashed #cbd5e1; border-radius:18px; }
+  #poolLabel { margin:22px 0 8px; font-size:1.05rem; font-weight:bold; color:#0b7a6e; }
+  #pool { display:flex; flex-wrap:wrap; gap:10px; justify-content:center; max-width:480px; margin:0 auto; background:#fff; border:4px solid #bfeee8; border-radius:26px; padding:16px 8px; min-height:120px; align-items:center; }
+  .bigbtn.hear { background:#3d9bff; color:#fff; font-size:1.45rem; padding:18px 34px; }
+  .bigbtn.play { background:#3fbf5a; color:#fff; }
+  .bigbtn.clear { background:#e2e8f0; color:#334155; }
+  .bigbtn.next.highlight { box-shadow:0 0 0 6px #ffe066, 0 3px 8px rgba(0,0,0,.18); }
   .confetti { position:fixed; top:-16px; width:13px; height:13px; border-radius:3px; z-index:50; pointer-events:none; animation:fall linear forwards; }
   @keyframes fall { to { transform:translateY(105vh) rotate(720deg); opacity:.85; } }
   footer { padding:8px 12px 30px; }
@@ -54,17 +71,38 @@
   <p id="counter">Words built: 0</p>
 </header>
 <main>
-  <div id="buddy" title="Tap me!">🫧</div>
-  <div id="prompt">Let&rsquo;s build a word!</div>
-  <div id="pic">🐱</div>
-  <div id="stage"></div>
-  <div class="controls">
-    <button class="bigbtn build" id="buildBtn">▶️ Build it!</button>
-    <button class="bigbtn slow" id="slowBtn">🐌 Again slowly</button>
-    <button class="bigbtn next" id="nextBtn">➡️ Next word</button>
+  <div id="modebar">
+    <button class="modebtn on" id="modeBuildBtn">🔨 Build</button>
+    <button class="modebtn" id="modePickBtn">👂 Pick the Sounds</button>
   </div>
-  <div id="pickerLabel">👇 Pick a picture! 👇</div>
-  <div id="picker"></div>
+  <div id="buddy" title="Tap me!">🫧</div>
+  <div id="buildUI">
+    <div id="prompt">Let&rsquo;s build a word!</div>
+    <div id="pic">🐱</div>
+    <div id="stage"></div>
+    <div class="controls">
+      <button class="bigbtn build" id="buildBtn">▶️ Build it!</button>
+      <button class="bigbtn slow" id="slowBtn">🐌 Again slowly</button>
+      <button class="bigbtn next" id="nextBtn">➡️ Next word</button>
+    </div>
+    <div id="pickerLabel">👇 Pick a picture! 👇</div>
+    <div id="picker"></div>
+  </div>
+  <div id="pickUI" hidden>
+    <div id="pickPrompt">Listen! Pick the sounds you hear!</div>
+    <div id="pickPic">🐱</div>
+    <div class="controls">
+      <button class="bigbtn hear" id="hearBtn">🔊 Hear it</button>
+    </div>
+    <div id="pickStage"></div>
+    <div id="poolLabel">👇 Tap the sounds! 👇</div>
+    <div id="pool"></div>
+    <div class="controls">
+      <button class="bigbtn play" id="playMineBtn" disabled>▶️ Play my word!</button>
+      <button class="bigbtn clear" id="clearBtn" disabled>↩️ Clear</button>
+      <button class="bigbtn next" id="pickNextBtn">➡️ Next word</button>
+    </div>
+  </div>
 </main>
 <footer>
   <p><button id="installBtn" onclick="installApp()" style="display:none;font-size:1rem;padding:10px 18px;border:none;border-radius:999px;background:#2ec4b6;color:#fff;font-family:inherit;cursor:pointer">📱 Install this app</button></p>
@@ -78,8 +116,10 @@ if ("serviceWorker" in navigator) { window.addEventListener("load", () => naviga
 </footer>
 <script>
 "use strict";
-// ---- Build a Word: the word IS the toy. Chunks are tapped to HEAR, never to guess.
-// No wrong input exists anywhere in this app. All sound = pre-recorded Rumi MP3s.
+// ---- Build a Word: the word IS the toy. Build mode: chunks are tapped to HEAR.
+// Pick mode: Rose picks the sounds she hears; her picks play back and THAT is the
+// feedback — no per-tap right/wrong, no buzzer (Amanda's anti-mashing rule).
+// All sound = pre-recorded Aria MP3s. Never a device/TTS voice.
 const WORDS = [
   { id:"cat",   pic:"🐱",    chunks:["c","at"] },
   { id:"dog",   pic:"🐶",    chunks:["d","og"] },
@@ -211,7 +251,191 @@ $("nextBtn").addEventListener("click", () => {
   showWord(cur + 1);
   playClip("audio/prompt_build.mp3");
 });
-$("buddy").addEventListener("click", () => { if (!building) playClip("audio/prompt_pick.mp3"); });
+$("buddy").addEventListener("click", () => {
+  if (building || pickBusy) return;
+  playClip(mode === "pick" ? "audio/prompt_pick_sounds.mp3" : "audio/prompt_pick.mp3");
+});
+
+// ================= Pick the Sounds (roadmap #3 — Amanda's first pick, Oct 18, 2026) =================
+// Rose HEARS the word, then picks its sound chunks out of a pool that also holds
+// chunks from other words. Her picks play back in order and the playback is the
+// feedback — no per-tap right/wrong, no buzzer. One miss: gentle try-again clip,
+// then the correct word as the model, stage clears, same word retries. Second
+// miss on the same word: "Watch me!" reveals the correct chunks on the stage,
+// finale plays, praise for the effort, Next lights up. She is never stuck and
+// Next always works. A correctly picked word counts on the shared counter;
+// a revealed (shown) word does not — she was shown it, she didn't pick it.
+const ONSETS = ["c","d","p","s","m","f","sh","fr","b","r"];
+const RIMES = ["at","og","ig","un","ap","it","ish","ip","uck","ark","ake","ee","ose"];
+const PICK_PRAISE = ["audio/praise_pick_1.mp3","audio/praise_pick_2.mp3"];
+
+let mode = "build";
+let pickPicks = [], pickPool = [], pickColors = {}, pickMisses = 0, pickBusy = false, pickDone = false;
+
+const pickStage = $("pickStage"), poolEl = $("pool");
+
+function shuffle(a){ for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+
+// The word's finale clip(s) — Rose's finale is two clips played back-to-back.
+function playFinale(w){
+  return playClip("audio/word_" + w.id + ".mp3").then(() =>
+    w.id === "rose" ? playClip("audio/word_rose_name.mp3") : null);
+}
+
+function pickChunkBtn(cid){
+  const b = document.createElement("button");
+  b.className = "chunk";
+  b.textContent = DISPLAY[cid] || cid;
+  b.style.background = pickColors[cid] || COLORS[0];
+  b.dataset.chunk = cid;
+  return b;
+}
+
+function renderPickStage(){
+  pickStage.classList.toggle("glow", pickDone);
+  pickStage.innerHTML = "";
+  pickPicks.forEach(cid => {
+    const b = pickChunkBtn(cid);
+    b.classList.add("landed");
+    b.addEventListener("click", () => {
+      if (pickBusy) return;
+      playClip("audio/chunk_" + cid + ".mp3");
+      if (pickDone) return; // finished stage: taps only replay the sound
+      pickPicks = pickPicks.filter(c => c !== cid);
+      renderPickStage(); renderPool(); refreshPickControls();
+    });
+    pickStage.appendChild(b);
+  });
+  for (let i = pickPicks.length; i < WORDS[cur].chunks.length; i++) {
+    const s = document.createElement("div");
+    s.className = "slot";
+    pickStage.appendChild(s);
+  }
+}
+
+function renderPool(){
+  poolEl.innerHTML = "";
+  pickPool.forEach(cid => {
+    if (pickPicks.includes(cid)) return;
+    const b = pickChunkBtn(cid);
+    b.addEventListener("click", () => {
+      if (pickBusy || pickDone) return;
+      playClip("audio/chunk_" + cid + ".mp3");
+      if (pickPicks.length >= WORDS[cur].chunks.length) return; // stage full: hear only
+      pickPicks.push(cid);
+      renderPickStage(); renderPool(); refreshPickControls();
+    });
+    poolEl.appendChild(b);
+  });
+}
+
+function refreshPickControls(){
+  const w = WORDS[cur];
+  $("hearBtn").disabled = pickBusy;
+  $("playMineBtn").disabled = pickBusy || pickDone || pickPicks.length !== w.chunks.length;
+  $("clearBtn").disabled = pickBusy || pickDone || pickPicks.length === 0;
+  $("pickNextBtn").disabled = pickBusy;
+  $("pickNextBtn").classList.toggle("highlight", pickDone);
+  $("modeBuildBtn").disabled = pickBusy;
+  $("modePickBtn").disabled = pickBusy;
+}
+
+function startPickRound(i){
+  cur = (i + WORDS.length) % WORDS.length;
+  const w = WORDS[cur];
+  $("pickPic").textContent = w.pic;
+  $("pickPrompt").textContent = "Listen! Pick the sounds you hear!";
+  pickPicks = []; pickMisses = 0; pickBusy = false; pickDone = false;
+  const onset = w.chunks[0], rime = w.chunks[1];
+  const onsets = shuffle(ONSETS.filter(c => c !== onset).slice());
+  const rimes = shuffle(RIMES.filter(c => c !== rime).slice());
+  const distractors = Math.random() < 0.5
+    ? [onsets[0], onsets[1], rimes[0]]
+    : [onsets[0], rimes[0], rimes[1]];
+  pickPool = shuffle([...w.chunks, ...distractors]);
+  pickColors = {};
+  pickPool.forEach((cid, n) => { pickColors[cid] = COLORS[n % COLORS.length]; });
+  renderPickStage(); renderPool(); refreshPickControls();
+}
+
+async function playMine(){
+  if (pickBusy || pickDone) return;
+  const w = WORDS[cur];
+  if (pickPicks.length !== w.chunks.length) return;
+  pickBusy = true; refreshPickControls();
+  for (const cid of pickPicks) {           // her word, her picks, in her order
+    await playClip("audio/chunk_" + cid + ".mp3");
+    await wait(200);
+  }
+  const correct = pickPicks.every((cid, i) => cid === w.chunks[i]);
+  if (correct) {
+    pickDone = true;
+    renderPickStage();
+    confetti();
+    await playFinale(w);
+    builtCount++;
+    localStorage.setItem("bawBuilt", String(builtCount));
+    renderCounter();
+    await playClip(PICK_PRAISE[Math.floor(Math.random() * PICK_PRAISE.length)]);
+  } else {
+    pickMisses++;
+    if (pickMisses >= 2) {                  // never stuck: show her, celebrate effort
+      await playClip("audio/prompt_watch_me.mp3");
+      pickPicks = [];
+      renderPickStage(); renderPool();
+      await wait(300);
+      for (const cid of w.chunks) {
+        pickPicks.push(cid);
+        renderPickStage(); renderPool();
+        await playClip("audio/chunk_" + cid + ".mp3");
+        await wait(300);
+      }
+      pickDone = true;
+      renderPickStage();
+      confetti();
+      await playFinale(w);
+      await playClip(PICK_PRAISE[Math.floor(Math.random() * PICK_PRAISE.length)]);
+    } else {                                // gentle: try-again + the model, then retry
+      await playClip("audio/prompt_try_again.mp3");
+      await playFinale(w);
+      pickPicks = [];
+      renderPickStage(); renderPool();
+    }
+  }
+  pickBusy = false;
+  refreshPickControls();
+}
+
+$("hearBtn").addEventListener("click", () => { if (!pickBusy) playFinale(WORDS[cur]); });
+$("playMineBtn").addEventListener("click", playMine);
+$("clearBtn").addEventListener("click", () => {
+  if (pickBusy || pickDone) return;
+  pickPicks = [];
+  renderPickStage(); renderPool(); refreshPickControls();
+});
+$("pickNextBtn").addEventListener("click", () => {
+  if (pickBusy) return;
+  startPickRound(cur + 1);
+  playClip("audio/prompt_pick_sounds.mp3");
+});
+
+// ---- mode switch: Build stays exactly as it was; Pick runs its own rounds.
+function setMode(m){
+  if (m === mode || building || pickBusy) return;
+  mode = m;
+  $("modeBuildBtn").classList.toggle("on", m === "build");
+  $("modePickBtn").classList.toggle("on", m === "pick");
+  $("buildUI").hidden = m !== "build";
+  $("pickUI").hidden = m !== "pick";
+  if (m === "pick") {
+    startPickRound(cur);
+    playClip("audio/prompt_pick_sounds.mp3");
+  } else {
+    showWord(cur);
+  }
+}
+$("modeBuildBtn").addEventListener("click", () => setMode("build"));
+$("modePickBtn").addEventListener("click", () => setMode("pick"));
 
 // Parent reset (two-tap, arms for 5s): resets ONLY the built-words counter.
 let armed = false, armTimer = null;
