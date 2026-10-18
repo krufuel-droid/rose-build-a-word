@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#2ec4b6">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Build a Word">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Build a Word — for Rose</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin:0; font-family:"Comic Sans MS","Chalkboard SE",system-ui,sans-serif; background:#eafffa; color:#173d38; text-align:center; }
+  header { background:linear-gradient(135deg,#a7f3ea,#c5f0d3); padding:12px 10px 10px; box-shadow:0 2px 8px rgba(0,0,0,.10); }
+  header h1 { margin:0; font-size:1.5rem; }
+  #counter { margin:4px 0 0; font-size:1rem; font-weight:bold; color:#0b7a6e; }
+  main { max-width:560px; margin:0 auto; padding:14px 12px 30px; }
+  #buddy { font-size:3.6rem; line-height:1; cursor:pointer; display:inline-block; animation:bob 2.4s ease-in-out infinite; }
+  @keyframes bob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-7px)} }
+  #prompt { font-size:1.25rem; font-weight:bold; margin:6px 0 2px; min-height:1.6em; }
+  #pic { font-size:6.2rem; line-height:1.15; margin:4px 0 2px; }
+  #stage { background:#fff; border:4px dashed #2ec4b6; border-radius:26px; min-height:150px; margin:14px auto 6px; padding:26px 8px 14px; display:flex; flex-wrap:wrap; gap:10px; justify-content:center; align-items:flex-end; max-width:480px; transition:box-shadow .3s, background .3s; position:relative; }
+  #stage.glow { background:#fffbe0; box-shadow:0 0 0 6px #ffe066, 0 0 34px 10px rgba(255,214,64,.75); border-color:#f5b301; }
+  .chunk { border:none; font-family:inherit; font-weight:bold; color:#fff; border-radius:18px; padding:14px 20px; font-size:2.6rem; letter-spacing:.04em; cursor:pointer; box-shadow:0 4px 0 rgba(0,0,0,.18), 0 6px 12px rgba(0,0,0,.15); transition:transform .45s cubic-bezier(.34,1.56,.64,1), opacity .45s; }
+  .chunk.waiting { transform:translateY(64px) scale(.82); opacity:.30; box-shadow:none; }
+  .chunk.landed { animation:land .45s ease; }
+  @keyframes land { 30%{transform:translateY(-16px) scale(1.10);} 60%{transform:translateY(2px) scale(.97);} }
+  #stage.glow .chunk { animation:wiggle .5s ease infinite alternate; }
+  @keyframes wiggle { from{transform:rotate(-2deg)} to{transform:rotate(2deg)} }
+  .controls { margin-top:20px; display:flex; flex-wrap:wrap; gap:10px; justify-content:center; }
+  .bigbtn { font-size:1.25rem; font-weight:bold; padding:16px 24px; border:none; border-radius:999px; font-family:inherit; cursor:pointer; box-shadow:0 3px 8px rgba(0,0,0,.18); }
+  .bigbtn.build { background:#2ec4b6; color:#fff; font-size:1.45rem; padding:18px 34px; }
+  .bigbtn.slow { background:#8fc9ff; color:#12324f; }
+  .bigbtn.next { background:#ffb84d; color:#5a3400; }
+  .bigbtn:disabled { opacity:.45; }
+  #pickerLabel { margin:26px 0 8px; font-size:1.05rem; font-weight:bold; color:#0b7a6e; }
+  #picker { display:flex; flex-wrap:wrap; gap:10px; justify-content:center; max-width:480px; margin:0 auto; }
+  .pick { font-size:2rem; width:62px; height:62px; border:3px solid #bfeee8; border-radius:18px; background:#fff; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,.10); padding:0; line-height:1; }
+  .pick.current { border-color:#f5b301; background:#fffbe0; }
+  .confetti { position:fixed; top:-16px; width:13px; height:13px; border-radius:3px; z-index:50; pointer-events:none; animation:fall linear forwards; }
+  @keyframes fall { to { transform:translateY(105vh) rotate(720deg); opacity:.85; } }
+  footer { padding:8px 12px 30px; }
+  #parentBtn { font-size:.85rem; padding:9px 16px; border:none; border-radius:999px; background:#e2e8f0; color:#475569; font-family:inherit; cursor:pointer; }
+  #parentBtn.armed { background:#fda4af; color:#7f1d1d; font-weight:bold; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🫧 Build a Word 🫧</h1>
+  <p id="counter">Words built: 0</p>
+</header>
+<main>
+  <div id="buddy" title="Tap me!">🫧</div>
+  <div id="prompt">Let&rsquo;s build a word!</div>
+  <div id="pic">🐱</div>
+  <div id="stage"></div>
+  <div class="controls">
+    <button class="bigbtn build" id="buildBtn">▶️ Build it!</button>
+    <button class="bigbtn slow" id="slowBtn">🐌 Again slowly</button>
+    <button class="bigbtn next" id="nextBtn">➡️ Next word</button>
+  </div>
+  <div id="pickerLabel">👇 Pick a picture! 👇</div>
+  <div id="picker"></div>
+</main>
+<footer>
+  <p><button id="installBtn" onclick="installApp()" style="display:none;font-size:1rem;padding:10px 18px;border:none;border-radius:999px;background:#2ec4b6;color:#fff;font-family:inherit;cursor:pointer">📱 Install this app</button></p>
+<script>
+let deferredInstall = null;
+window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); deferredInstall = e; const b = document.getElementById("installBtn"); if (b) b.style.display = "inline-block"; });
+function installApp(){ if (deferredInstall) { deferredInstall.prompt(); deferredInstall.userChoice.then(() => { deferredInstall = null; const b = document.getElementById("installBtn"); if (b) b.style.display = "none"; }); } }
+if ("serviceWorker" in navigator) { window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {})); }
+</script>
+  <p><button id="parentBtn">For Mom &amp; Dad 🔐</button></p>
+</footer>
+<script>
+"use strict";
+// ---- Build a Word: the word IS the toy. Chunks are tapped to HEAR, never to guess.
+// No wrong input exists anywhere in this app. All sound = pre-recorded Rumi MP3s.
+const WORDS = [
+  { id:"cat",   pic:"🐱",    chunks:["c","at"] },
+  { id:"dog",   pic:"🐶",    chunks:["d","og"] },
+  { id:"pig",   pic:"🐷",    chunks:["p","ig"] },
+  { id:"sun",   pic:"☀️",    chunks:["s","un"] },
+  { id:"map",   pic:"🗺️",    chunks:["m","ap"] },
+  { id:"sit",   pic:"👧🪑",  chunks:["s","it"] },
+  { id:"fish",  pic:"🐟",    chunks:["f","ish"] },
+  { id:"ship",  pic:"🚢",    chunks:["sh","ip"] },
+  { id:"duck",  pic:"🦆",    chunks:["d","uck"] },
+  { id:"shark", pic:"🦈",    chunks:["sh","ark"] },
+  { id:"frog",  pic:"🐸",    chunks:["fr","og"] },
+  { id:"cake",  pic:"🎂",    chunks:["c","ake"] },
+  { id:"bee",   pic:"🐝",    chunks:["b","ee"] },
+  { id:"rose",  pic:"🌹",    chunks:["r","ose"] }
+];
+const DISPLAY = { r:"R" }; // Rose gets her capital R
+const COLORS = ["#ff6fa5","#ff9f2e","#3fbf5a","#3d9bff","#9b6bff","#ff5a4d"];
+const PRAISE = ["audio/praise_build_1.mp3","audio/praise_build_2.mp3","audio/praise_build_3.mp3"];
+
+let cur = 0, building = false, builtCount = parseInt(localStorage.getItem("bawBuilt") || "0", 10) || 0;
+
+const $ = id => document.getElementById(id);
+const stage = $("stage"), picEl = $("pic"), promptEl = $("prompt");
+
+// Single shared player; playClip resolves when the clip ends (or after a safety cap).
+let player = new Audio(), playResolve = null, playTimer = null;
+function playClip(src){
+  return new Promise(res => {
+    if (playResolve) { const r = playResolve; playResolve = null; r(); }
+    clearTimeout(playTimer);
+    player.pause();
+    player = new Audio();
+    playResolve = res;
+    const done = () => { if (playResolve === res) { playResolve = null; clearTimeout(playTimer); res(); } };
+    player.addEventListener("ended", done);
+    player.addEventListener("error", done);
+    playTimer = setTimeout(done, 6000);
+    player.src = src;
+    const p = player.play();
+    if (p && p.catch) p.catch(done);
+  });
+}
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+function renderCounter(){ $("counter").textContent = "Words built: " + builtCount; }
+
+function showWord(i){
+  cur = (i + WORDS.length) % WORDS.length;
+  const w = WORDS[cur];
+  picEl.textContent = w.pic;
+  promptEl.textContent = "Let\u2019s build a word!";
+  stage.classList.remove("glow");
+  stage.innerHTML = "";
+  w.chunks.forEach((cid, n) => {
+    const b = document.createElement("button");
+    b.className = "chunk waiting";
+    b.textContent = DISPLAY[cid] || cid;
+    b.style.background = COLORS[n % COLORS.length];
+    b.dataset.chunk = cid;
+    b.addEventListener("click", () => {
+      if (building || b.classList.contains("waiting")) return;
+      playClip("audio/chunk_" + cid + ".mp3");
+    });
+    stage.appendChild(b);
+  });
+  document.querySelectorAll(".pick").forEach((el, n) => el.classList.toggle("current", n === cur));
+  $("buildBtn").disabled = false;
+}
+
+async function build(slow){
+  if (building) return;
+  building = true;
+  $("buildBtn").disabled = true; $("slowBtn").disabled = true; $("nextBtn").disabled = true;
+  stage.classList.remove("glow");
+  const blocks = Array.from(stage.children);
+  blocks.forEach(b => { b.classList.add("waiting"); b.classList.remove("landed"); });
+  await wait(slow ? 500 : 250);
+  for (const b of blocks) {
+    b.classList.remove("waiting");
+    b.classList.add("landed");
+    const heard = playClip("audio/chunk_" + b.dataset.chunk + ".mp3");
+    await wait(slow ? 450 : 200);
+    await heard;
+    await wait(slow ? 850 : 320);
+  }
+  await wait(slow ? 700 : 400);
+  stage.classList.add("glow");
+  confetti();
+  const whole = playClip("audio/word_" + WORDS[cur].id + ".mp3");
+  await whole;
+  builtCount++;
+  localStorage.setItem("bawBuilt", String(builtCount));
+  renderCounter();
+  await playClip(PRAISE[Math.floor(Math.random() * PRAISE.length)]);
+  building = false;
+  $("buildBtn").disabled = false; $("slowBtn").disabled = false; $("nextBtn").disabled = false;
+}
+
+function confetti(){
+  const colors = ["#ff6fa5","#ffd23e","#3fbf5a","#3d9bff","#9b6bff","#2ec4b6"];
+  for (let i = 0; i < 44; i++) {
+    const d = document.createElement("div");
+    d.className = "confetti";
+    d.style.left = Math.random() * 100 + "vw";
+    d.style.background = colors[i % colors.length];
+    d.style.animationDuration = (1.4 + Math.random() * 1.4) + "s";
+    d.style.animationDelay = (Math.random() * 0.35) + "s";
+    if (i % 3 === 0) d.style.borderRadius = "50%";
+    document.body.appendChild(d);
+    setTimeout(() => d.remove(), 3400);
+  }
+}
+
+// Picker: picture buttons are navigation (choose a word), never answers.
+WORDS.forEach((w, i) => {
+  const b = document.createElement("button");
+  b.className = "pick";
+  b.textContent = w.pic;
+  b.addEventListener("click", () => { if (!building) showWord(i); });
+  $("picker").appendChild(b);
+});
+
+$("buildBtn").addEventListener("click", () => build(false));
+$("slowBtn").addEventListener("click", () => build(true));
+$("nextBtn").addEventListener("click", () => {
+  if (building) return;
+  showWord(cur + 1);
+  playClip("audio/prompt_build.mp3");
+});
+$("buddy").addEventListener("click", () => { if (!building) playClip("audio/prompt_pick.mp3"); });
+
+// Parent reset (two-tap, arms for 5s): resets ONLY the built-words counter.
+let armed = false, armTimer = null;
+$("parentBtn").addEventListener("click", () => {
+  const btn = $("parentBtn");
+  if (!armed) {
+    armed = true;
+    btn.textContent = "Start all over — tap again to reset the counter";
+    btn.classList.add("armed");
+    armTimer = setTimeout(() => { armed = false; btn.textContent = "For Mom & Dad 🔐"; btn.classList.remove("armed"); }, 5000);
+    return;
+  }
+  clearTimeout(armTimer);
+  armed = false;
+  builtCount = 0;
+  localStorage.setItem("bawBuilt", "0");
+  renderCounter();
+  btn.textContent = "For Mom & Dad 🔐";
+  btn.classList.remove("armed");
+});
+
+renderCounter();
+showWord(0); // silent on open — no audio until Rose taps something
+</script>
+</body>
+</html>
