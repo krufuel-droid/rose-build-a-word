@@ -171,6 +171,7 @@ async function build(slow){
   confetti();
   const whole = playClip("audio/word_" + WORDS[cur].id + ".mp3");
   await whole;
+  if (WORDS[cur].id === "rose") await playClip("audio/word_rose_name.mp3"); // "That's your name!" — separate clip: Rumi renders it as one long drawl when joined to the sound-out
   builtCount++;
   localStorage.setItem("bawBuilt", String(builtCount));
   renderCounter();
