@@ -110,7 +110,20 @@
 let deferredInstall = null;
 window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); deferredInstall = e; const b = document.getElementById("installBtn"); if (b) b.style.display = "inline-block"; });
 function installApp(){ if (deferredInstall) { deferredInstall.prompt(); deferredInstall.userChoice.then(() => { deferredInstall = null; const b = document.getElementById("installBtn"); if (b) b.style.display = "none"; }); } }
-if ("serviceWorker" in navigator) { window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {})); }
+if ("serviceWorker" in navigator) {
+  // Update-friendly registration: when a new worker takes control of a page
+  // that was ALREADY controlled, reload once so the fresh version lands on a
+  // normal reopen (sessionStorage flag guards against reload loops; a first
+  // install never reloads because there was no previous controller).
+  const hadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (!hadController) return;
+    if (sessionStorage.getItem("bawSwReloaded")) return;
+    sessionStorage.setItem("bawSwReloaded", "1");
+    window.location.reload();
+  });
+  window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").then(reg => { if (reg.waiting) reg.update(); }).catch(() => {}));
+}
 </script>
   <p><button id="parentBtn">For Mom &amp; Dad 🔐</button></p>
 </footer>
