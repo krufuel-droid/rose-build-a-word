@@ -265,9 +265,14 @@ $("buddy").addEventListener("click", () => {
 // finale plays, praise for the effort, Next lights up. She is never stuck and
 // Next always works. A correctly picked word counts on the shared counter;
 // a revealed (shown) word does not — she was shown it, she didn't pick it.
+// Pick mode plays the chunk1_ clips (SINGLE sounds, trimmed from the verified
+// chunk_ clips): the chunk_ clips deliberately say each sound twice or with a
+// carrier word, which is the teaching voice in Build mode but made Pick mode
+// play doubles (Amanda's QA, Oct 18, 2026). Build mode keeps chunk_ as-is.
 const ONSETS = ["c","d","p","s","m","f","sh","fr","b","r"];
 const RIMES = ["at","og","ig","un","ap","it","ish","ip","uck","ark","ake","ee","ose"];
 const PICK_PRAISE = ["audio/praise_pick_1.mp3","audio/praise_pick_2.mp3"];
+const chunk1Clip = cid => "audio/chunk1_" + cid + ".mp3"; // single-sound clips, Pick mode only
 
 let mode = "build";
 let pickPicks = [], pickPool = [], pickColors = {}, pickMisses = 0, pickBusy = false, pickDone = false;
@@ -299,7 +304,7 @@ function renderPickStage(){
     b.classList.add("landed");
     b.addEventListener("click", () => {
       if (pickBusy) return;
-      playClip("audio/chunk_" + cid + ".mp3");
+      playClip(chunk1Clip(cid));
       if (pickDone) return; // finished stage: taps only replay the sound
       pickPicks = pickPicks.filter(c => c !== cid);
       renderPickStage(); renderPool(); refreshPickControls();
@@ -320,7 +325,7 @@ function renderPool(){
     const b = pickChunkBtn(cid);
     b.addEventListener("click", () => {
       if (pickBusy || pickDone) return;
-      playClip("audio/chunk_" + cid + ".mp3");
+      playClip(chunk1Clip(cid));
       if (pickPicks.length >= WORDS[cur].chunks.length) return; // stage full: hear only
       pickPicks.push(cid);
       renderPickStage(); renderPool(); refreshPickControls();
@@ -364,7 +369,7 @@ async function playMine(){
   if (pickPicks.length !== w.chunks.length) return;
   pickBusy = true; refreshPickControls();
   for (const cid of pickPicks) {           // her word, her picks, in her order
-    await playClip("audio/chunk_" + cid + ".mp3");
+    await playClip(chunk1Clip(cid));
     await wait(200);
   }
   const correct = pickPicks.every((cid, i) => cid === w.chunks[i]);
@@ -387,7 +392,7 @@ async function playMine(){
       for (const cid of w.chunks) {
         pickPicks.push(cid);
         renderPickStage(); renderPool();
-        await playClip("audio/chunk_" + cid + ".mp3");
+        await playClip(chunk1Clip(cid));
         await wait(300);
       }
       pickDone = true;
